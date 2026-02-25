@@ -75,15 +75,30 @@ button,input{
 let highestZ = 1;
 let imageCounter = 0;
 
-function makeDraggable(el){
+function makeInteractive(el){
+
   let offsetX, offsetY;
+  let startDistance = 0;
+  let startWidth = 0;
+
+  function getDistance(touches){
+    const dx = touches[0].clientX - touches[1].clientX;
+    const dy = touches[0].clientY - touches[1].clientY;
+    return Math.sqrt(dx*dx + dy*dy);
+  }
 
   function start(e){
-    e.preventDefault();
     el.style.zIndex = ++highestZ;
 
-    const rect = el.getBoundingClientRect();
+    if(e.touches && e.touches.length === 2){
+      // Pinch start
+      startDistance = getDistance(e.touches);
+      startWidth = el.offsetWidth;
+      return;
+    }
+
     const pt = e.touches ? e.touches[0] : e;
+    const rect = el.getBoundingClientRect();
     offsetX = pt.clientX - rect.left;
     offsetY = pt.clientY - rect.top;
 
@@ -94,7 +109,14 @@ function makeDraggable(el){
   }
 
   function move(e){
-    e.preventDefault();
+    if(e.touches && e.touches.length === 2){
+      e.preventDefault();
+      const newDistance = getDistance(e.touches);
+      const scale = newDistance / startDistance;
+      el.style.width = (startWidth * scale) + "px";
+      return;
+    }
+
     const pt = e.touches ? e.touches[0] : e;
     el.style.left = (pt.clientX - offsetX) + "px";
     el.style.top  = (pt.clientY - offsetY) + "px";
@@ -105,8 +127,22 @@ function makeDraggable(el){
     document.removeEventListener("touchmove", move);
   }
 
+  // Mouse drag
   el.addEventListener("mousedown", start);
+
+  // Touch drag + pinch
   el.addEventListener("touchstart", start, {passive:false});
+
+  // Mouse wheel resize
+  el.addEventListener("wheel", (e)=>{
+    e.preventDefault();
+    const delta = e.deltaY * -0.01;
+    const newWidth = el.offsetWidth * (1 + delta);
+    if(newWidth > 30){
+      el.style.width = newWidth + "px";
+    }
+  });
+
 }
 
 function addImage(dataURL){
@@ -120,22 +156,21 @@ function addImage(dataURL){
   img.style.zIndex = ++highestZ;
 
   document.body.appendChild(img);
-  makeDraggable(img);
+  makeInteractive(img);
 }
 
 document.getElementById("imageInput").addEventListener("change", (e)=>{
-  const file = e.target.files && e.target.files[0];
+  const file = e.target.files[0];
   if(!file) return;
 
   if(file.type === "image/svg+xml"){
-    alert("SVG blocked for safety.");
+    alert("SVG blocked.");
     return;
   }
 
   const reader = new FileReader();
   reader.onload = (ev)=> addImage(ev.target.result);
   reader.readAsDataURL(file);
-
   e.target.value = "";
 });
 
@@ -176,7 +211,7 @@ function importLayout(){
     img.style.zIndex = item.z;
 
     document.body.appendChild(img);
-    makeDraggable(img);
+    makeInteractive(img);
     highestZ = Math.max(highestZ, item.z);
   });
 }
