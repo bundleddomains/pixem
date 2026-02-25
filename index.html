@@ -2,14 +2,21 @@
 <html>
 <head>
 <meta charset="UTF-8">
+
+<meta name="viewport"
+content="width=device-width, initial-scale=1.0,
+maximum-scale=1.0, user-scalable=no">
+
 <title>Rat Luhv Layout Tool</title>
+
 <style>
-body{
+html, body{
   margin:0;
   background:#000;
   overflow:hidden;
   font-family:monospace;
   color:#0f0;
+  touch-action:none;
 }
 
 .rat{
@@ -27,6 +34,7 @@ body{
   border:1px solid #333;
   padding:12px;
   width:320px;
+  z-index:9999;
 }
 
 textarea{
@@ -91,7 +99,6 @@ function makeInteractive(el){
     el.style.zIndex = ++highestZ;
 
     if(e.touches && e.touches.length === 2){
-      // Pinch start
       startDistance = getDistance(e.touches);
       startWidth = el.offsetWidth;
       return;
@@ -109,11 +116,15 @@ function makeInteractive(el){
   }
 
   function move(e){
+
     if(e.touches && e.touches.length === 2){
       e.preventDefault();
       const newDistance = getDistance(e.touches);
       const scale = newDistance / startDistance;
-      el.style.width = (startWidth * scale) + "px";
+      const newWidth = startWidth * scale;
+      if(newWidth > 30){
+        el.style.width = newWidth + "px";
+      }
       return;
     }
 
@@ -127,13 +138,9 @@ function makeInteractive(el){
     document.removeEventListener("touchmove", move);
   }
 
-  // Mouse drag
   el.addEventListener("mousedown", start);
-
-  // Touch drag + pinch
   el.addEventListener("touchstart", start, {passive:false});
 
-  // Mouse wheel resize
   el.addEventListener("wheel", (e)=>{
     e.preventDefault();
     const delta = e.deltaY * -0.01;
@@ -142,7 +149,6 @@ function makeInteractive(el){
       el.style.width = newWidth + "px";
     }
   });
-
 }
 
 function addImage(dataURL){
